@@ -1,0 +1,161 @@
+const API_BASE = '/api';
+
+import type { User, Turn, Preference, Holiday, LogEntry, Stats } from '../src/types';
+
+interface LoginResult {
+  success: boolean;
+  user?: {
+    id: string;
+    email: string;
+    ruolo: string;
+    nome: string;
+    isManager: boolean;
+  };
+  token?: string;
+  error?: string;
+}
+
+async function callAPI(action: string, data?: any): Promise<any> {
+  const url = `${API_BASE}?action=${action}`;
+
+  const options: RequestInit = {
+    method: data ? 'POST' : 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: data ? JSON.stringify(data) : undefined,
+  };
+
+  const response = await fetch(url, options);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || `API error: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+// ==================== AUTH ====================
+
+export async function login(email: string, pin: string): Promise<LoginResult> {
+  const url = `${API_BASE}?action=login&email=${encodeURIComponent(email)}&pin=${pin}`;
+  const response = await fetch(url, { method: 'GET' });
+  return await response.json();
+}
+
+// ==================== UTENTI ====================
+
+export async function getUsers(): Promise<User[]> {
+  const result = await callAPI('getUsers');
+  return result.users || [];
+}
+
+export async function addUser(user: Omit<User, 'id' | 'punti' | 'ultimoTurno'>): Promise<User> {
+  const result = await callAPI('addUser', user);
+  if (!result.success) throw new Error(result.error);
+  return result.user;
+}
+
+export async function updateUser(user: Partial<User> & { id: string }): Promise<User> {
+  const result = await callAPI('updateUser', user);
+  if (!result.success) throw new Error(result.error);
+  return result.user;
+}
+
+export async function setUserStatus(id: string, stato: 'ON' | 'OFF', motivo?: string): Promise<void> {
+  const result = await callAPI('setUserStatus', { id, stato, motivo });
+  if (!result.success) throw new Error(result.error);
+}
+
+// ==================== TURNI ====================
+
+export async function getTurns(): Promise<Turn[]> {
+  const result = await callAPI('getTurns');
+  return result.turns || [];
+}
+
+export async function addTurn(turn: {
+  data: string;
+  idTecnico: string;
+  tecnicoNome: string;
+  tipoGiorno: string;
+  punti: number;
+  note?: string;
+}): Promise<void> {
+  const result = await callAPI('addTurn', turn);
+  if (!result.success) throw new Error(result.error);
+}
+
+export async function deleteTurn(data: string): Promise<void> {
+  const result = await callAPI('deleteTurn', { data });
+  if (!result.success) throw new Error(result.error);
+}
+
+// ==================== PREFERENZE ====================
+
+export async function getPreferences(): Promise<Preference[]> {
+  const result = await callAPI('getPreferences');
+  return result.preferences || [];
+}
+
+export async function setPreference(preference: {
+  idTecnico: string;
+  nomeTecnico: string;
+  data: string;
+  preferenza: 'VERDE' | 'BIANCO' | 'GIALLO' | 'ROSSO';
+}): Promise<void> {
+  const result = await callAPI('setPreference', preference);
+  if (!result.success) throw new Error(result.error);
+}
+
+// ==================== FESTIVITÀ ====================
+
+export async function getHolidays(): Promise<Holiday[]> {
+  const result = await callAPI('getHolidays');
+  return result.holidays || [];
+}
+
+// ==================== LOG ====================
+
+export async function getLog(): Promise<LogEntry[]> {
+  const result = await callAPI('getLog');
+  return result.log || [];
+}
+
+// ==================== STATS ====================
+
+export async function getStats(): Promise<Stats> {
+  const result = await callAPI('getStats');
+  return result.stats || {};
+}
+
+// ==================== MANAGER ====================
+
+export async function calculateTurniAutomatici(): Promise<{ assegnazioni: number; anomalie: any[] }> {
+  const result = await callAPI('calculateTurni');
+  if (!result.success) throw new Error(result.error);
+  return { assegnazioni: result.assegnazioni, anomalie: result.anomalie };
+}
+
+export async function updatePoints(): Promise<void> {
+  const result = await callAPI('updatePoints');
+  if (!result.success) throw new Error(result.error);
+}
+
+export async function changePin(userId: string, newPin: string): Promise<void> {
+  const result = await callAPI('changePin', { userId, newPin });
+  if (!result.success) throw new Error(result.error);
+}
+
+export async function resetPin(userId: string): Promise<{ success: boolean; newPin: string }> {
+  const result = await callAPI('resetPin', { userId });
+  if (!result.success) throw new Error(result.error);
+  return { success: true, newPin: result.newPin };
+}
+
+export async function generateModulo(mese: number, anno: number): Promise<{ foglio: string; url: string }> {
+  const result = await callAPI('generateModulo', { mese, anno });
+  if (!result.success) throw new Error(result.error);
+  return { foglio: result.foglio, url: result.url };
+}
