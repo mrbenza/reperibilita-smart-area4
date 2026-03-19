@@ -16,7 +16,8 @@ interface LoginResult {
 }
 
 async function callAPI(action: string, data?: any): Promise<any> {
-  const url = `${API_BASE}?action=${action}`;
+  const token = localStorage.getItem('auth_token') || '';
+  const url = `${API_BASE}?action=${action}&token=${encodeURIComponent(token)}`;
 
   const options: RequestInit = {
     method: data ? 'POST' : 'GET',
